@@ -9,6 +9,8 @@ Sub GetSamsungStockPrices()
     Dim result As Object
     Dim timestamps As Object
     Dim closes As Object
+
+    '*********** 고가에 대한 정보 추가
     Dim highs As Object
     
     Dim timestamp As Variant
