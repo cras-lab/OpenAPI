@@ -1,0 +1,65 @@
+Sub GetSamsungStockPrices()
+    Dim xmlHttp As Object
+    Dim json As Object
+    Dim ws As Worksheet
+    Dim i As Integer
+    Dim url As String
+    Dim startDate As String
+    Dim endDate As String
+    Dim result As Object
+    Dim timestamps As Object
+    Dim closes As Object
+    Dim timestamp As Variant
+    Dim closePrice As Variant
+    
+    ' Define the worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    
+    ' Yahoo Finance API URL for Samsung Electronics (005930.KS)
+    startDate = "1672531200" ' Unix timestamp for 2024-01-01
+    endDate = "1714675200"   ' Unix timestamp for 2024-03-31
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/005930.KS?period1=" & startDate & "&period2=" & endDate & "&interval=1d"
+    
+    ' Create XMLHTTP Request
+    Set xmlHttp = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    xmlHttp.Open "GET", url, False
+    xmlHttp.send
+    
+    ' Wait until the data is fully loaded
+    Do While xmlHttp.readyState <> 4
+        DoEvents
+    Loop
+    
+    ' Parse JSON response
+    Set json = JsonConverter.ParseJson(xmlHttp.responseText)
+    
+    ' Clear previous data
+    ws.Cells.Clear
+    
+    ' Write headers
+    ws.Cells(1, 1).Value = "Date"
+    ws.Cells(1, 2).Value = "Close Price"
+    
+    ' Extract historical data
+    On Error GoTo ErrorHandler
+    Set result = json("chart")("result")(1)
+    Set timestamps = result("timestamp")
+    Set closes = result("indicators")("quote")(1)("close")
+    
+    ' Loop through the data and write to sheet
+    For i = 0 To timestamps.Count - 1
+        ws.Cells(i + 2, 1).Value = DateAdd("s", CLng(timestamps(i + 1)), "1970-01-01 00:00:00")
+        closePrice = closes(i + 1)
+        If Not IsEmpty(closePrice) Then
+            ws.Cells(i + 2, 2).Value = closePrice
+        Else
+            ws.Cells(i + 2, 2).Value = "N/A"
+        End If
+    Next i
+    
+    MsgBox "Stock data retrieved and written to the sheet successfully!"
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Error: " & Err.Description
+End Sub
