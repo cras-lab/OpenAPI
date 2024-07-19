@@ -1,0 +1,1 @@
+Excercising Open API practices
