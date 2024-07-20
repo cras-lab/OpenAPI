@@ -1,0 +1,99 @@
+Sub GetSeoulParkingInfo()
+    Dim apiKey As String
+    Dim requestUrl As String
+    Dim http As Object
+    Dim json As Object
+    Dim i As Integer
+    Dim responseStream As Object
+    Dim responseText As String
+
+    ' API 키 설정
+    apiKey = "42477864496f6b6133356455666f56"  ' 실제 발급받은 API 키를 여기에 입력하세요.
+
+    ' API URL 생성
+    requestUrl = "http://openapi.seoul.go.kr:8088/" & apiKey & "/json/GetParkInfo/1/1000"
+    
+    ' HTTP 요청 객체 생성
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", requestUrl, False
+    http.setRequestHeader "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8"
+    http.send
+    
+    ' 응답 처리
+    If http.Status = 200 Then
+        ' ADODB.Stream 객체를 사용하여 UTF-8로 인코딩된 응답을 읽어옴
+        Set responseStream = CreateObject("ADODB.Stream")
+        responseStream.Type = 1 ' adTypeBinary
+        responseStream.Open
+        responseStream.Write http.responseBody
+        responseStream.Position = 0
+        responseStream.Type = 2 ' adTypeText
+        responseStream.Charset = "utf-8"
+        responseText = responseStream.ReadText
+        responseStream.Close
+        
+        ' JSON 응답을 텍스트로 출력하여 확인
+        Debug.Print responseText
+        
+        ' JSON 파싱
+        Set json = JsonConverter.ParseJson(responseText)
+        
+        ' 전체 응답 데이터를 디버그 창에 출력
+        Debug.Print JsonConverter.ConvertToJson(json, False)
+        
+        ' 시트에 출력할 데이터 초기화
+        i = 1
+        With ThisWorkbook.Sheets("Sheet1")
+            .Cells.ClearContents
+            .Cells(i, 1).Value = "주차장명"
+            .Cells(i, 2).Value = "주소"
+            .Cells(i, 3).Value = "전체 주차 대수"
+            .Cells(i, 4).Value = "남은 주차 대수"
+            .Cells(i, 5).Value = "일 주차비 최대"
+            i = i + 1
+            
+            ' 응답 데이터에서 주차장 정보 추출 및 출력
+            If Not json("GetParkInfo")("row") Is Nothing Then
+                For Each park In json("GetParkInfo")("row")
+                    .Cells(i, 1).Value = park("PKLT_NM")
+                    .Cells(i, 2).Value = park("ADDR")
+                    .Cells(i, 3).Value = park("PRK_CRG")
+                    .Cells(i, 4).Value = park("PRK_HM")
+                    .Cells(i, 5).Value = park("DLY_MAX_CRG")
+                    i = i + 1
+                Next park
+            Else
+                MsgBox "Error: 'GetParkInfo' not found in response"
+            End If
+        End With
+    Else
+        MsgBox "Failed to retrieve data: " & http.Status & " " & http.statusText
+    End If
+End Sub
+
+Function URLEncode(ByVal str As String) As String
+    Dim i As Integer
+    Dim c As String
+    Dim result As String
+    Dim charCode As Long
+    
+    result = ""
+    For i = 1 To Len(str)
+        c = Mid(str, i, 1)
+        charCode = Asc(c)
+        If charCode = 32 Then
+            result = result & "+"
+        ElseIf (charCode >= 48 And charCode <= 57) Or _
+               (charCode >= 65 And charCode <= 90) Or _
+               (charCode >= 97 And charCode <= 122) Or _
+               charCode = 45 Or charCode = 46 Or charCode = 95 Or charCode = 126 Then
+            result = result & c
+        Else
+            result = result & "%" & Hex(charCode)
+        End If
+    Next i
+    
+    URLEncode = result
+End Function
+
+
