@@ -42,13 +42,20 @@ Sub GetSamsungStockPrices()
     
     ' Extract historical data
     On Error GoTo ErrorHandler
+
+    ' 첫번쨰 원소 추출: Python은 0부터지만 VB는 1부터 시작
     Set result = json("chart")("result")(1)
+
+    ' 배열 하나만 존재: {  "meta": {...},  "timestamp": [...],  "indicators": {...} }의 딕셔너리 존재
+    ' timestamps만 추출
     Set timestamps = result("timestamp")
+    ' 종가만 추출
     Set closes = result("indicators")("quote")(1)("close")
     
     ' Loop through the data and write to sheet
     For i = 0 To timestamps.Count - 1
-        ws.Cells(i + 2, 1).Value = DateAdd("s", CLng(timestamps(i + 1)), "1970-01-01 00:00:00")
+        ' CLng은 timestamps를 정수로 변환한다.
+        ws.Cells(i + 2, 1).Value = DateAdd("s", CLng(timestamps(i + 1)), "1970-01-01 00:00:00") 
         closePrice = closes(i + 1)
         If Not IsEmpty(closePrice) Then
             ws.Cells(i + 2, 2).Value = closePrice
